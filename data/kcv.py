@@ -5,18 +5,24 @@ from data.data_preprocessor import load_gait_sequences
 from data.dataset import GaitSequenceDataset
 
 
-def get_fold_indices(dataset_size, k):
+def get_fold_indices(dataset_size, k, shuffle=True, seed=2005):
     """
     Generate train/validation indices for k-fold CV.
 
     Args:
         dataset_size (int): Total number of samples.
         k (int): Number of folds.
+        shuffle (bool): Whether to shuffle the indices.
+        seed (int): Random seed.
 
     Returns:
         List of (train_indices, val_indices) tuples
     """
     indices = np.arange(dataset_size)
+    if shuffle:
+        np.random.seed(seed)
+        np.random.shuffle(indices)
+
     fold_sizes = np.full(k, dataset_size // k, dtype=int)
     fold_sizes[:dataset_size % k] += 1
     current = 0
