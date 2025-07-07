@@ -62,3 +62,16 @@ class GEIConvLSTMClassifier(nn.Module):
         out = self.classifier(pooled)  # (B, num_classes)
 
         return out
+if __name__ == '__main__':
+    device = torch.device("mps" if torch.mps.is_available() else "cpu")
+    num_classes = 5
+    model = GEIConvLSTMClassifier(num_classes=num_classes)
+    # Dummy input: (B, T, 1, H, W)
+    B, T, H, W = 4, 6, 64, 64  # Example shape
+    x = torch.randn(B, T, 1, H, W)
+    # Sequence lengths (for variable-length sequences, if needed by ConvLSTM)
+    seq_lengths = torch.full((B,), T, dtype=torch.long)  # Assuming all have same length
+    # Forward pass
+    output = model(x, seq_lengths)
+    # Print output shape
+    print("Output shape:", output.shape)  # Expected: (B, num_classes)
