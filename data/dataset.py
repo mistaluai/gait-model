@@ -24,7 +24,7 @@ class GaitSequenceDataset(Dataset):
         self.transform = transform or transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Normalize(mean=[0.5], std=[0.5])  # for grayscale
         ])
         self.return_metadata = return_metadata
         self.return_one = return_one
@@ -97,7 +97,12 @@ class GaitSequenceDataset(Dataset):
                 'trial': item['trial'],
                 'source': item['source']
             }
-            return frames, label, meta
+            if self.return_one:
+                return frames, label, meta
+            return frames, label, original_seq_len ,meta
+
+        if self.return_one:
+            return frames, label
 
         return frames, label, original_seq_len
 
