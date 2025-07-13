@@ -17,7 +17,7 @@ def train(
         model.train()
         total_loss = 0.0
         
-        for x, seq_lengths, y in train_loader: # we need to edit the get item to return the length of the sequence before padding
+        for x, y, seq_lengths in train_loader: # we need to edit the get item to return the length of the sequence before padding
             
             x, seq_lengths, y = x.to(device), seq_lengths.to(device), y.to(device)
 
@@ -39,7 +39,7 @@ def train(
     all_preds, all_labels = [], []
 
     with torch.no_grad():
-        for x, seq_lengths, y in val_loader:
+        for x, y, seq_lengths in val_loader:
             x, seq_lengths = x.to(device), seq_lengths.to(device)
             logits = model(x, seq_lengths)
             preds = torch.argmax(logits, dim=1)
