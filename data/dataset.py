@@ -76,7 +76,7 @@ class GaitSequenceDataset(Dataset):
 
         # Load and transform all frames
         frames = [self.load_and_transform_image(p) if isinstance(p, str) else p for p in seq_paths]
-
+        original_seq_len = len(frames)
         # Enforce target sequence length
         if len(frames) < self.target_length:
             frames = self.pad_sequence(frames)
@@ -99,7 +99,7 @@ class GaitSequenceDataset(Dataset):
             }
             return frames, label, meta
 
-        return frames, label
+        return frames, label, original_seq_len
 
 if __name__ == "__main__":
     df = load_gait_sequences("./gei_maps/Multiclass6", load_images=False)
