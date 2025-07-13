@@ -20,7 +20,8 @@ class GEIConvLSTMClassifier(nn.Module):
         # ConvLSTM for temporal modeling of extracted features
         self.convlstm = ConvLSTM(input_channels=16, hidden_channels=32, kernel_size=3)
 
-        self.norm = nn.LayerNorm([32, 32, 32]) # Normalization of the output
+        # self.norm = nn.LayerNorm([32, 32, 32]) # Normalization of the output
+        self.norm = nn.BatchNorm2d(32) # temp issue fix till we meet
 
         # Global average pooling to compress spatial features
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
