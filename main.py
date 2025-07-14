@@ -6,7 +6,7 @@ from utils.visualization import visualize_fold_accuracies
 
 def main():
     # Path to your dataset folder
-    dataset_path = "GEI_maps/binary"  # Change as needed
+    dataset_path = "data/binary"  # Change as needed
 
     # Load dataframe
     df = load_gait_sequences(dataset_path, load_images=True)
