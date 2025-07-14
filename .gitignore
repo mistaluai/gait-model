@@ -1,4 +1,7 @@
 /.idea
 /data/gei_maps
 /data/__pycache__
+/GEI_maps/
+*.rar
+*.zip
 *.pyc
