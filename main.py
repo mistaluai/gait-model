@@ -9,9 +9,9 @@ def main():
     dataset_path = "GEI_maps/binary"  # Change as needed
 
     # Load dataframe
-    df = load_gait_sequences(dataset_path, load_images=False)
+    df = load_gait_sequences(dataset_path, load_images=True)
     dataset = GaitSequenceDataset(df)
-
+    
     # Model and training parameters
     num_classes = len(df['label'].unique())
     k_folds = 5
