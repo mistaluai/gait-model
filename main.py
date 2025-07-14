@@ -4,12 +4,12 @@ from models.gaitLSTM import GEIConvLSTMClassifier
 from training.training import run_kfold_training
 from utils.visualization import visualize_fold_accuracies
 
-def main():
+def main(path: str = None):
     # Path to your dataset folder
-    dataset_path = "data/binary"  # Change as needed
+    dataset_path = path or "data/binary"
 
     # Load dataframe
-    df = load_gait_sequences(dataset_path, load_images=True)
+    df = load_gait_sequences(dataset_path, load_images=False)
     dataset = GaitSequenceDataset(df)
     
     # Model and training parameters
@@ -37,4 +37,4 @@ def main():
     visualize_fold_accuracies(accuracies)
 
 if __name__ == "__main__":
-    main()
+    main("data/binary")
