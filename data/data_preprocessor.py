@@ -114,4 +114,5 @@ def load_gait_sequences(
 
 if __name__ == '__main__':
     df = load_gait_sequences("./gei_maps/Binary", load_images=False)
+    print(df.columns)
     print(df.sample(10))

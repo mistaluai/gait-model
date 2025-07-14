@@ -21,6 +21,7 @@ class GaitSequenceDataset(Dataset):
             image_size (tuple): Target size for padding and resizing (H, W)
         """
         self.data = dataframe
+        print(self.data.columns)
         self.transform = transform or transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
@@ -72,7 +73,7 @@ class GaitSequenceDataset(Dataset):
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
         label = self.label_to_index[item['label']]
-        seq_paths = item['sequence']
+        seq_paths = item['sequence'] 
 
         # Load and transform all frames
         frames = [self.load_and_transform_image(p) if isinstance(p, str) else p for p in seq_paths]
