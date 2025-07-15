@@ -16,7 +16,16 @@ from utils.visualization import visualize_fold_accuracies
 from training.training import run_kfold_training, train_model
 
 
-def main(path: str = None):
+def main(path: str = None,
+         k_folds: int = 5,
+         epochs: int = 10,
+         batch_size: int = 32,
+         lr: float = 1e-3,
+         num_workers: int = 2,
+         seed: int = 2005
+         ):
+    set_seed(seed)
+
     # Path to your dataset folder
     dataset_path = path or "data/binary"
 
@@ -25,11 +34,11 @@ def main(path: str = None):
 
     # Model and training parameters
     num_classes = len(df['label'].unique())
-    k_folds = 5
-    epochs = 10
-    batch_size = 32
-    lr = 1e-3
-    num_workers = 2
+    k_folds = k_folds or 5
+    epochs = epochs or 10
+    batch_size = batch_size or 32
+    lr = lr or 1e-3
+    num_workers = num_workers or 2
 
     # Run k-fold training
     accuracies = run_kfold_training(
