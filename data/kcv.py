@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import Subset, DataLoader
 
 from data.data_preprocessor import load_gait_sequences
-from data.dataset import GaitSequenceDataset
+from data.dataset import GaitFrameSequenceDataset
 
 
 def get_fold_indices(dataset_size, k, shuffle=True, seed=2005):
@@ -84,7 +84,7 @@ def run_kfold_cross_validation(dataset, k=5, batch_size=1, num_workers=1):
 
 if __name__ == "__main__":
     df = load_gait_sequences("./gei_maps/Multiclass6", load_images=False)
-    dataset = GaitSequenceDataset(df)
+    dataset = GaitFrameSequenceDataset(df)
 
     for fold_idx, train_loader, val_loader in run_kfold_cross_validation(dataset, k=5, batch_size=4):
         # Training
