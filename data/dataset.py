@@ -3,9 +3,10 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 import numpy as np
+import cv2
 
 from data.data_preprocessor import load_gait_sequences
-from utils.visualize_samples import visualize_gait_samples
+from utils.visualize_samples import visualize_gait_samples, visualize_optical_flow_samples
 
 
 class GaitSequenceDataset(Dataset):
@@ -21,7 +22,6 @@ class GaitSequenceDataset(Dataset):
             image_size (tuple): Target size for padding and resizing (H, W)
         """
         self.data = dataframe
-        print(self.data.columns)
         self.transform = transform or transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
@@ -70,13 +70,32 @@ class GaitSequenceDataset(Dataset):
         indices = np.linspace(0, len(frames) - 1, self.target_length).astype(int)
         return [frames[i] for i in indices]
 
+    def compute_optical_flow(self, frame1, frame2):
+        f1 = frame1.squeeze(0).numpy()
+        f2 = frame2.squeeze(0).numpy()
+
+        f1 = (f1 * 255).astype(np.uint8)
+        f2 = (f2 * 255).astype(np.uint8)
+
+        flow = cv2.calcOpticalFlowFarneback(f1, f2, None,
+                                            pyr_scale=0.5,
+                                            levels=5,
+                                            winsize=11,
+                                            iterations=5,
+                                            poly_n=5,
+                                            poly_sigma=1.1,
+                                            flags=cv2.OPTFLOW_FARNEBACK_GAUSSIAN)
+
+        flow_tensor = torch.from_numpy(flow.transpose(2, 0, 1)).float()
+        return flow_tensor
+
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
         label = self.label_to_index[item['label']]
-        seq_paths = item['sequence'] 
+        seq_paths = item['sequence']
 
         # Load and transform all frames
-        frames = [self.load_and_transform_image(p) if isinstance(p, str) else p for p in seq_paths]
+        frames = [self.load_and_transform_image(p) for p in seq_paths]
         original_seq_len = len(frames)
         # Enforce target sequence length
         if len(frames) < self.target_length:
@@ -86,8 +105,11 @@ class GaitSequenceDataset(Dataset):
 
         # Choose output type
         if self.return_one:
-            mid_idx = len(frames) // 2
-            frames = frames[mid_idx]  # Tensor: [1, H, W]
+            accumulated_flow = torch.zeros(2, *frames[0].shape[1:])  # [2, H, W]
+            for i in range(len(frames) - 1):
+                flow = self.compute_optical_flow(frames[i], frames[i + 1])
+                accumulated_flow += flow
+            frames = accumulated_flow  # [2, H, W]
         else:
             frames = torch.stack(frames)  # Tensor: [T, 1, H, W]
 
@@ -110,11 +132,9 @@ class GaitSequenceDataset(Dataset):
 if __name__ == "__main__":
     df = load_gait_sequences("./gei_maps/Multiclass6", load_images=False)
 
-    transform = transforms.ToTensor()
     dataset = GaitSequenceDataset(
         df,
-        transform=transform,
-        return_one=False,
+        return_one=True,
         return_metadata=False,
     )
 
@@ -122,4 +142,5 @@ if __name__ == "__main__":
     seq, label = next(iter(loader))
     print(seq.shape)
 
-    visualize_gait_samples(dataset, n=5)
+    # visualize_gait_samples(dataset, n=5)
+    visualize_optical_flow_samples(dataset, n=5)
