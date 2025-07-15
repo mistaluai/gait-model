@@ -4,15 +4,34 @@ import numpy as np
 import torch.nn as nn
 from torch.optim import Adam
 from tqdm import tqdm
+import inspect
 
 from data.data_preprocessor import load_gait_sequences
 from data.dataset import GaitFrameSequenceDataset
-from data.kcv import run_kfold_cross_validation
-
-import inspect
-
 from models.gaitLSTM import GEIConvLSTMClassifier
 from utils.visualization import visualize_fold_accuracies
+from data.kcv import run_kfold_cross_validation
+
+
+def evaluate_model(model, data_loader, device, use_seq_len, use_tqdm=True, label="Validation"):
+    model.eval()
+    all_preds, all_labels = [], []
+    with torch.no_grad():
+        loop = tqdm(data_loader, desc=f"Evaluating {label}", leave=False) if use_tqdm else data_loader
+        for x, y, *extras in loop:
+            x = x.to(device)
+            y = y.to(device)
+            seq_lengths = extras[0].to(device) if use_seq_len and extras else None
+
+            outputs = model(x, seq_lengths) if use_seq_len and seq_lengths is not None else model(x)
+            preds = torch.argmax(outputs, dim=1)
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(y.cpu().numpy())
+
+    acc = accuracy_score(all_labels, all_preds)
+    print(f"{label} Accuracy: {acc:.4f}")
+    return acc
 
 
 def train_model(
@@ -26,24 +45,6 @@ def train_model(
     num_epochs=10,
     use_tqdm=True
 ):
-    """
-    Generic training loop for models with/without sequence lengths (LSTM or CNN).
-    Automatically checks if the model's forward method expects `seq_lengths`.
-
-    Args:
-        model (nn.Module): Model to train.
-        train_loader (DataLoader): Training data.
-        val_loader (DataLoader): Validation data.
-        criterion: Loss function.
-        optimizer: Optimizer.
-        device: Torch device.
-        scheduler: Learning rate scheduler.
-        num_epochs: Number of epochs.
-        use_tqdm (bool): Whether to show tqdm progress bars.
-
-    Returns:
-        float: Validation accuracy.
-    """
     model = model.to(device)
     use_seq_len = "seq_lengths" in inspect.signature(model.forward).parameters
 
@@ -70,24 +71,11 @@ def train_model(
         avg_loss = running_loss / len(train_loader)
         print(f"Epoch {epoch}/{num_epochs} - Training Loss: {avg_loss:.4f}")
 
-    # Evaluation
-    model.eval()
-    all_preds, all_labels = [], []
-    with torch.no_grad():
-        loop = tqdm(val_loader, desc="Evaluating", leave=False) if use_tqdm else val_loader
-        for x, y, *extras in loop:
-            x = x.to(device)
-            seq_lengths = extras[0].to(device) if use_seq_len and extras else None
+    # Evaluate on training and validation sets
+    train_acc = evaluate_model(model, train_loader, device, use_seq_len, use_tqdm, label="Training")
+    val_acc = evaluate_model(model, val_loader, device, use_seq_len, use_tqdm, label="Validation")
 
-            outputs = model(x, seq_lengths) if use_seq_len and seq_lengths is not None else model(x)
-            preds = torch.argmax(outputs, dim=1)
-
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(y.numpy())
-
-    acc = accuracy_score(all_labels, all_preds)
-    print(f"Validation Accuracy: {acc:.4f}")
-    return acc
+    return train_acc, val_acc
 
 
 def run_kfold_training(
@@ -101,25 +89,9 @@ def run_kfold_training(
     num_workers=1,
     use_tqdm=True
 ):
-    """
-    Runs k-fold cross-validation for any model (CNN or LSTM).
-
-    Args:
-        dataset (Dataset): GaitSequenceDataset.
-        model_class (nn.Module): Model class.
-        num_classes (int): Number of classes.
-        k_folds (int): Folds count.
-        epochs (int): Epochs per fold.
-        batch_size (int): Batch size.
-        lr (float): Learning rate.
-        num_workers (int): DataLoader workers.
-        use_tqdm (bool): Whether to use tqdm progress bars.
-
-    Returns:
-        List[float]: Accuracy for each fold.
-    """
     device = torch.device("cuda" if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
-    fold_accuracies = []
+    train_accuracies = []
+    val_accuracies = []
 
     for fold_idx, train_loader, val_loader in run_kfold_cross_validation(
         dataset, k=k_folds, batch_size=batch_size, num_workers=num_workers
@@ -130,7 +102,7 @@ def run_kfold_training(
         criterion = nn.CrossEntropyLoss()
         optimizer = Adam(model.parameters(), lr=lr)
 
-        acc = train_model(
+        train_acc, val_acc = train_model(
             model,
             train_loader,
             val_loader,
@@ -140,10 +112,14 @@ def run_kfold_training(
             num_epochs=epochs,
             use_tqdm=use_tqdm
         )
-        fold_accuracies.append(acc)
 
-    print(f"\nAverage Accuracy over {k_folds} folds: {np.mean(fold_accuracies):.4f}")
-    return fold_accuracies
+        train_accuracies.append(train_acc)
+        val_accuracies.append(val_acc)
+
+    print(f"\nAverage Training Accuracy: {np.mean(train_accuracies):.4f}")
+    print(f"Average Validation Accuracy: {np.mean(val_accuracies):.4f}")
+
+    return val_accuracies
 
 
 if __name__ == "__main__":
