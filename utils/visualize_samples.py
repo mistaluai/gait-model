@@ -16,37 +16,43 @@ def flow_to_rgb(flow):
     mag, ang = cv2.cartToPolar(u, v, angleInDegrees=True)
 
     hsv = np.zeros((u.shape[0], u.shape[1], 3), dtype=np.uint8)
-    hsv[..., 0] = ang / 2                # Hue: angle
-    hsv[..., 1] = 255                    # Saturation
-    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)  # Value: magnitude
+    hsv[..., 0] = ang / 2
+    hsv[..., 1] = 255
+    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
 
     rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return rgb
 
 
-def visualize_optical_flow_samples(dataset, n=4):
+def visualize_optical_flow_samples(dataset, n=2, max_flows_per_sample=3):
     """
-    Visualize n optical flow samples from a GaitOpticalFlowDataset instance.
+    Visualize optical flow maps from temporal flow sequences.
 
     Args:
-        dataset (GaitOpticalFlowDataset): the dataset object.
-        n (int): number of samples to visualize.
+        dataset: GaitOpticalFlowDataset with temporal flow [T-1, 2, H, W]
+        n (int): number of samples to visualize
+        max_flows_per_sample (int): max number of time steps (flows) per sample
     """
-    plt.figure(figsize=(n * 3, 3))
+    sample = dataset[0][0]
+    T = sample.shape[0]  # T-1 flows per sample
+    max_t = min(T, max_flows_per_sample)
+
+    fig, axes = plt.subplots(nrows=n, ncols=max_t, figsize=(max_t * 3, n * 3))
+
+    if n == 1: axes = [axes]
+    if max_t == 1: axes = [[ax] for ax in axes]
 
     for i in range(n):
-        data = dataset[i]
-        flow_tensor, label = data[:2]
+        flow_seq, label = dataset[i][:2]
+        for t in range(max_t):
+            rgb = flow_to_rgb(flow_seq[t])  # [2, H, W] → [H, W, 3]
+            ax = axes[i][t]
+            ax.imshow(rgb)
+            ax.axis('off')
+            ax.set_title(f"t={t}→{t+1}")
 
-        if isinstance(label, torch.Tensor):
-            label = label.item()
-
-        rgb_flow = flow_to_rgb(flow_tensor)  # Convert [2, H, W] → [H, W, 3]
-
-        ax = plt.subplot(1, n, i + 1)
-        ax.imshow(rgb_flow)
-        ax.axis('off')
-        ax.set_title(f"Class: {label}")
+        # Label the left-most image with the class
+        axes[i][0].set_ylabel(f"Class: {label}", fontsize=10)
 
     plt.tight_layout()
     plt.show()

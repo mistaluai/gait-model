@@ -1,9 +1,10 @@
+import os
 from data.data_preprocessor import load_gait_sequences
-from data.dataset import GaitSequenceDataset
+from data.dataset import GaitOpticalFlowDataset, GaitFrameSequenceDataset
 from models.gaitLSTM import GEIConvLSTMClassifier
-from models.optical_flow_CNN import FlowCNN
-from training.training import run_kfold_training
+from utils.random_seed import set_seed
 from utils.visualization import visualize_fold_accuracies
+from training.training import run_kfold_training
 
 def main(path: str = None):
     # Path to your dataset folder
@@ -11,7 +12,7 @@ def main(path: str = None):
 
     # Load dataframe
     df = load_gait_sequences(dataset_path, load_images=False)
-    dataset = GaitSequenceDataset(df)
+    dataset = GaitFrameSequenceDataset(df)
     
     # Model and training parameters
     num_classes = len(df['label'].unique())
@@ -37,7 +38,6 @@ def main(path: str = None):
     # Visualize results
     visualize_fold_accuracies(accuracies)
 
-
 def main_flow(
     path: str = None,
     k_folds: int = 5,
@@ -45,40 +45,50 @@ def main_flow(
     batch_size: int = 32,
     lr: float = 1e-3,
     num_workers: int = 2,
-    use_tqdm: bool = True
+    use_tqdm: bool = True,
+    use_tvl1: bool = True,
+    augment_flow=None,
+    seed: int = 2005
 ):
     """
-    Train FlowCNN model using accumulated optical flow dataset with k-fold cross-validation.
+    Train a GEIConvLSTM model using temporal optical flow dataset with k-fold cross-validation.
 
     Args:
-        path (str): Path to the dataset directory.
-        k_folds (int): Number of cross-validation folds.
-        epochs (int): Number of training epochs per fold.
-        batch_size (int): Batch size for training.
-        lr (float): Learning rate.
-        num_workers (int): Number of data loading workers.
-        use_tqdm (bool): Whether to use progress bars.
+        path (str): Path to dataset directory (default: "data/binary")
+        k_folds (int): Number of cross-validation folds
+        epochs (int): Training epochs per fold
+        batch_size (int): Batch size for training
+        lr (float): Learning rate
+        num_workers (int): Number of DataLoader workers
+        use_tqdm (bool): Whether to show training progress bars
+        use_tvl1 (bool): Use TV-L1 optical flow instead of Farneback
+        augment_flow (callable): Optional flow augmentation function
+        seed (int): Random seed
     """
-    # Dataset path
+    # Set seed
+    set_seed(seed)
+
+    # Resolve dataset path
     dataset_path = path or "data/binary"
 
-    # Load sequences
+    # Load gait sequence metadata
     df = load_gait_sequences(dataset_path, load_images=False)
 
-    # Load dataset with accumulated optical flow
-    dataset = GaitSequenceDataset(
-        df,
-        return_one=True,
-        return_metadata=False
+    # Create dataset
+    dataset = GaitOpticalFlowDataset(
+        dataframe=df,
+        return_metadata=False,
+        flow_augment=augment_flow,
+        use_tvl1=use_tvl1
     )
 
-    # Get number of classes from dataset
+    # Determine number of output classes
     num_classes = len(df['label'].unique())
 
-    # Run training using FlowCNN
+    # Run training loop
     accuracies = run_kfold_training(
         dataset=dataset,
-        model_class=FlowCNN,
+        model_class=GEIConvLSTMClassifier,
         num_classes=num_classes,
         k_folds=k_folds,
         epochs=epochs,
@@ -88,8 +98,5 @@ def main_flow(
         use_tqdm=use_tqdm
     )
 
-    # Show results
+    # Plot final results
     visualize_fold_accuracies(accuracies)
-
-if __name__ == "__main__":
-    main("data/binary")
