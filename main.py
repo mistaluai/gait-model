@@ -11,6 +11,7 @@ from data.dataset import GaitOpticalFlowDataset, GaitFrameSequenceDataset
 from models.gaitFlow3DCNN import Flow3DCNNClassifier
 from models.gaitFlowLSTM import FlowConvLSTMClassifier
 from models.gaitLSTM import GEIConvLSTMClassifier
+from models.gait3DCNN import Gait3DCNNClassifier
 from utils.random_seed import set_seed
 from utils.visualization import visualize_fold_accuracies
 from training.training import run_kfold_training, train_model
@@ -43,7 +44,7 @@ def main(path: str = None,
     # Run k-fold training
     accuracies = run_kfold_training(
         df=df,
-        model_class=Flow3DCNNClassifier,
+        model_class=Gait3DCNNClassifier,
         dataset_class=GaitFrameSequenceDataset,
         num_classes=num_classes,
         k_folds=k_folds,
