@@ -1,6 +1,7 @@
 import os
 from data.data_preprocessor import load_gait_sequences
 from data.dataset import GaitOpticalFlowDataset, GaitFrameSequenceDataset
+from models.gaitFlowLSTM import FlowConvLSTMClassifier
 from models.gaitLSTM import GEIConvLSTMClassifier
 from utils.random_seed import set_seed
 from utils.visualization import visualize_fold_accuracies
@@ -88,7 +89,7 @@ def main_flow(
     # Run training loop
     accuracies = run_kfold_training(
         dataset=dataset,
-        model_class=GEIConvLSTMClassifier,
+        model_class=FlowConvLSTMClassifier,
         num_classes=num_classes,
         k_folds=k_folds,
         epochs=epochs,
