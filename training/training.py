@@ -6,7 +6,7 @@ from torch.optim import Adam
 from tqdm import tqdm
 
 from data.data_preprocessor import load_gait_sequences
-from data.dataset import GaitSequenceDataset
+from data.dataset import GaitFrameSequenceDataset
 from data.kcv import run_kfold_cross_validation
 
 import inspect
@@ -148,7 +148,7 @@ def run_kfold_training(
 
 if __name__ == "__main__":
     df = load_gait_sequences("/Users/mistaluai/Documents/Github Repos/gait-model/data/gei_maps/Multiclass6", load_images=False)
-    dataset = GaitSequenceDataset(df)
+    dataset = GaitFrameSequenceDataset(df)
 
     accuracies = run_kfold_training(
         dataset=dataset,
