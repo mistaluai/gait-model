@@ -45,13 +45,7 @@ class FlowConvLSTMClassifier(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, num_classes)
+            nn.Linear(256, num_classes),
         )
 
     def forward(self, x, seq_lengths):
