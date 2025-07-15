@@ -81,6 +81,7 @@ def main_flow(
     accuracies = run_kfold_training(
         df=df,
         model_class=FlowConvLSTMClassifier,
+        dataset_class=GaitOpticalFlowDataset,
         num_classes=num_classes,
         k_folds=k_folds,
         epochs=epochs,
