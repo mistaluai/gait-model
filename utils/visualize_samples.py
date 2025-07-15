@@ -1,11 +1,7 @@
 import matplotlib.pyplot as plt
 import torch
-
-import matplotlib.pyplot as plt
-import torch
 import numpy as np
 import cv2
-
 
 def flow_to_rgb(flow):
     """
@@ -30,14 +26,12 @@ def flow_to_rgb(flow):
 
 def visualize_optical_flow_samples(dataset, n=4):
     """
-    Visualize n optical flow samples from a GaitSequenceDataset instance with return_one=True.
+    Visualize n optical flow samples from a GaitOpticalFlowDataset instance.
 
     Args:
-        dataset (GaitSequenceDataset): the dataset object.
+        dataset (GaitOpticalFlowDataset): the dataset object.
         n (int): number of samples to visualize.
     """
-    assert dataset.return_one, "Dataset must be initialized with return_one=True to visualize flow."
-
     plt.figure(figsize=(n * 3, 3))
 
     for i in range(n):
@@ -57,21 +51,19 @@ def visualize_optical_flow_samples(dataset, n=4):
     plt.tight_layout()
     plt.show()
 
-def visualize_gait_samples(dataset, n=4, return_one=None):
+
+def visualize_gait_sequence_samples(dataset, n=4):
     """
-    Visualize n samples from a GaitSequenceDataset instance.
+    Visualize n grayscale gait sequence samples.
+    Supports both full sequences and single frame mode.
 
     Args:
-        dataset (GaitSequenceDataset): the dataset object.
+        dataset (GaitFrameSequenceDataset): the dataset object.
         n (int): number of samples to visualize.
-        return_one (bool): if None, use dataset.return_one;
-                           otherwise, override it temporarily.
     """
-    # Determine whether to show single or sequence
-    use_single = dataset.return_one if return_one is None else return_one
+    is_single_frame = isinstance(dataset[0][0], torch.Tensor) and dataset[0][0].dim() == 3
 
-    # Create a figure
-    plt.figure(figsize=(n * 3, 3 if use_single else 4))
+    plt.figure(figsize=(n * 3, 3 if is_single_frame else 4))
 
     for i in range(n):
         data = dataset[i]
@@ -80,7 +72,7 @@ def visualize_gait_samples(dataset, n=4, return_one=None):
         if isinstance(label, torch.Tensor):
             label = label.item()
 
-        if not use_single:
+        if not is_single_frame:
             # Sequence mode: show middle frame
             img_tensor = img_tensor[len(img_tensor) // 2]
 
