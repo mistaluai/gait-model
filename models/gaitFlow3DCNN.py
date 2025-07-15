@@ -15,9 +15,9 @@ class Flow3DCNNClassifier(nn.Module):
             )
 
         self.encoder = nn.Sequential(
-            conv_block(2, 32),               # [B, 2, T, H, W] → [B, 32, T, H/2, W/2]
-            conv_block(32, 64, pool_kernel=(2, 2, 2)),  # Reduce T, H, W
-            conv_block(64, 128, pool_kernel=(2, 2, 2)), # Reduce T, H, W
+            conv_block(2, 32, pool_kernel=(1, 2, 2)),  # Only pool spatially
+            conv_block(32, 64, pool_kernel=(1, 2, 2)),  # Only pool spatially
+            conv_block(64, 128, pool_kernel=(2, 2, 2)),  # Finally reduce T, H, W
             nn.AdaptiveAvgPool3d((1, 1, 1))  # → [B, 128, 1, 1, 1]
         )
 
