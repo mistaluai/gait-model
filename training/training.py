@@ -105,18 +105,27 @@ def run_kfold_training(
 
         train_df = df.iloc[train_idx].reset_index(drop=True)
         val_df = df.iloc[val_idx].reset_index(drop=True)
+        if dataset_class == GaitOpticalFlowDataset:
+            train_dataset = dataset_class(
+                dataframe=train_df,
+                train_augmentations=flow_augment,
+                use_tvl1=use_tvl1
+            )
+            val_dataset = dataset_class(
+                dataframe=val_df,
+                train_augmentations=None,
+                use_tvl1=use_tvl1,
+                label_to_index=train_dataset.label_to_index  # Ensure same label mapping
+            )
+        else:
+            train_dataset = dataset_class(
+                dataframe=train_df
 
-        train_dataset = dataset_class(
-            dataframe=train_df,
-            train_augmentations=flow_augment,
-            use_tvl1=use_tvl1
-        )
+            )
 
-        val_dataset = dataset_class(
-            dataframe=val_df,
-            train_augmentations=None,
-            use_tvl1=use_tvl1
-        )
+            val_dataset = dataset_class(
+                dataframe=val_df
+            )
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
