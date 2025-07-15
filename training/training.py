@@ -109,12 +109,10 @@ def run_kfold_training(
             train_dataset = dataset_class(
                 dataframe=train_df,
                 train_augmentations=flow_augment,
-                use_tvl1=use_tvl1
             )
             val_dataset = dataset_class(
                 dataframe=val_df,
                 train_augmentations=None,
-                use_tvl1=use_tvl1,
                 label_to_index=train_dataset.label_to_index  # Ensure same label mapping
             )
         else:
