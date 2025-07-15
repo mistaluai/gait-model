@@ -1,4 +1,11 @@
 import os
+
+import torch
+from sklearn.model_selection import train_test_split
+from torch import nn
+from torch.optim import Adam
+from torch.utils.data import DataLoader
+
 from data.data_preprocessor import load_gait_sequences
 from data.dataset import GaitOpticalFlowDataset, GaitFrameSequenceDataset
 from models.gaitFlow3DCNN import Flow3DCNNClassifier
@@ -6,7 +13,8 @@ from models.gaitFlowLSTM import FlowConvLSTMClassifier
 from models.gaitLSTM import GEIConvLSTMClassifier
 from utils.random_seed import set_seed
 from utils.visualization import visualize_fold_accuracies
-from training.training import run_kfold_training
+from training.training import run_kfold_training, train_model
+
 
 def main(path: str = None):
     # Path to your dataset folder
@@ -96,3 +104,81 @@ def main_flow(
 
     # Plot final results
     visualize_fold_accuracies(accuracies)
+
+def main_flow_no_folds(
+    path: str = None,
+    test_size: float = 0.2,
+    epochs: int = 10,
+    batch_size: int = 32,
+    lr: float = 1e-3,
+    num_workers: int = 2,
+    use_tqdm: bool = True,
+    use_tvl1: bool = True,
+    augment_flow=None,
+    seed: int = 2005
+):
+    """
+    Train a flow-based gait recognition model with a single train/val split (no k-fold).
+
+    Args:
+        path (str): Dataset path
+        test_size (float): Proportion of validation data
+        epochs (int): Training epochs
+        batch_size (int): Batch size
+        lr (float): Learning rate
+        num_workers (int): DataLoader workers
+        use_tqdm (bool): Use progress bars
+        use_tvl1 (bool): Use TV-L1 optical flow
+        augment_flow (callable): Optional flow augmentation
+        seed (int): Random seed
+    """
+    # Set reproducibility
+    set_seed(seed)
+
+    # Load metadata
+    dataset_path = path or "data/binary"
+    df = load_gait_sequences(dataset_path, load_images=False)
+    num_classes = len(df["label"].unique())
+
+    # Split train/val
+    train_df, val_df = train_test_split(df, test_size=test_size, stratify=df["label"], random_state=seed)
+
+    # Create datasets
+    train_dataset = GaitOpticalFlowDataset(
+        dataframe=train_df,
+        train_augmentations=augment_flow,
+        use_tvl1=use_tvl1
+    )
+
+    val_dataset = GaitOpticalFlowDataset(
+        dataframe=val_df,
+        train_augmentations=None,
+        use_tvl1=use_tvl1,
+        label_to_index=train_dataset.label_to_index  # Ensure same label mapping
+    )
+
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    # Initialize model
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    model = Flow3DCNNClassifier(num_classes=num_classes).to(device)
+
+    # Train
+    criterion = nn.CrossEntropyLoss()
+    optimizer = Adam(model.parameters(), lr=lr)
+
+    train_acc, val_acc = train_model(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        device=device,
+        num_epochs=epochs,
+        use_tqdm=use_tqdm
+    )
+
+    print(f"\nTrain Accuracy: {train_acc:.4f}")
+    print(f"Val Accuracy: {val_acc:.4f}")
