@@ -1,7 +1,7 @@
 import os
 
 import torch
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -140,8 +140,10 @@ def main_flow_no_folds(
     df = load_gait_sequences(dataset_path, load_images=False)
     num_classes = len(df["label"].unique())
 
-    # Split train/val
-    train_df, val_df = train_test_split(df, test_size=test_size, stratify=df["label"], random_state=seed)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.3, random_state=seed)
+    train_idx, val_idx = next(splitter.split(df, df["label"]))
+    train_df = df.iloc[train_idx].reset_index(drop=True)
+    val_df = df.iloc[val_idx].reset_index(drop=True)
 
     # Create datasets
     train_dataset = GaitOpticalFlowDataset(
