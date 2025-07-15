@@ -11,7 +11,7 @@ from data.dataset import GaitOpticalFlowDataset, GaitFrameSequenceDataset
 from models.gaitFlow3DCNN import Flow3DCNNClassifier
 from models.gaitFlowLSTM import FlowConvLSTMClassifier
 from models.gaitLSTM import GEIConvLSTMClassifier
-from models.gait3DCNN import Gait3DCNNClassifier
+from models.gait3DCNN import Gait3DCNNClassifier  # Your regular 3D CNN
 from utils.random_seed import set_seed
 from utils.visualization import visualize_fold_accuracies
 from training.training import run_kfold_training, train_model
