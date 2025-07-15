@@ -43,7 +43,8 @@ def main(path: str = None,
     # Run k-fold training
     accuracies = run_kfold_training(
         df=df,
-        model_class=GEIConvLSTMClassifier,
+        model_class=Flow3DCNNClassifier,
+        dataset_class=GaitFrameSequenceDataset,
         num_classes=num_classes,
         k_folds=k_folds,
         epochs=epochs,
