@@ -90,7 +90,7 @@ def main_flow(
     accuracies = run_kfold_training(
         df=df,
         model_class=Flow3DCNNClassifier,
-        dataset_class=GaitOpticalFlowDataset,
+        dataset_class=GaitFrameSequenceDataset,
         num_classes=num_classes,
         k_folds=k_folds,
         epochs=epochs,

@@ -23,23 +23,39 @@ class PCA:
         X_centered = X - self.mean_face
         n_samples, n_features = X_centered.shape
 
-        cov_matrix = np.cov(X_centered.T)
-        eigvals, eigvecs = np.linalg.eigh(cov_matrix)
+        if n_samples < n_features:
+            # Compact trick: eigen-decomposition of X X^T
+            cov_matrix = np.dot(X_centered, X_centered.T) / (n_samples - 1)
+            eigvals, eigvecs = np.linalg.eigh(cov_matrix)
+            sorted_indices = np.argsort(eigvals)[::-1]
+            eigvals = eigvals[sorted_indices]
+            eigvecs = eigvecs[:, sorted_indices]
 
-        sorted_indices = np.argsort(eigvals)[::-1]
-        eigvals = eigvals[sorted_indices]
-        eigvecs = eigvecs[:, sorted_indices]
+            # Project eigenvectors back to original space
+            eigfaces = np.dot(X_centered.T, eigvecs)
+            eigfaces = eigfaces / np.linalg.norm(eigfaces, axis=0)
 
-        # Step 5: Keep top-k components
-        if self.num_components is not None:
-            eigvecs = eigvecs[:, :self.num_components]
+            if self.num_components is not None:
+                eigfaces = eigfaces[:, :self.num_components]
 
-        # Normalize eigenfaces
-        eigvecs = eigvecs / np.linalg.norm(eigvecs, axis=0)
+            self.eigenfaces = eigfaces
+            self.components = eigfaces.T
+            self.projections = np.dot(X_centered, self.eigenfaces)
+        else:
+            # Standard PCA
+            cov_matrix = np.cov(X_centered.T)
+            eigvals, eigvecs = np.linalg.eigh(cov_matrix)
+            sorted_indices = np.argsort(eigvals)[::-1]
+            eigvals = eigvals[sorted_indices]
+            eigvecs = eigvecs[:, sorted_indices]
 
-        self.eigenfaces = eigvecs  # shape (n_features, k)
-        self.components = eigvecs.T
-        self.projections = np.dot(X_centered, self.eigenfaces)
+            if self.num_components is not None:
+                eigvecs = eigvecs[:, :self.num_components]
+
+            eigvecs = eigvecs / np.linalg.norm(eigvecs, axis=0)
+            self.eigenfaces = eigvecs
+            self.components = eigvecs.T
+            self.projections = np.dot(X_centered, self.eigenfaces)
 
     def transform(self, X):
         """
@@ -194,4 +210,3 @@ class Recognizer:
 
     def get_eigenfaces(self):
         return self.pca.get_eigenfaces()
-    
