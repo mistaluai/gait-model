@@ -45,7 +45,7 @@ def train_model(
 ):
     model = model.to(device)
     use_seq_len = "seq_lengths" in inspect.signature(model.forward).parameters
-
+    train_acc, val_acc = 0, 0
     for epoch in range(1, num_epochs + 1):
         model.train()
         running_loss = 0.0
@@ -67,12 +67,14 @@ def train_model(
             scheduler.step()
 
         avg_loss = running_loss / len(train_loader)
-        print(f"Epoch {epoch}/{num_epochs} - Training Loss: {avg_loss:.4f}")
 
-    train_acc = evaluate_model(model, train_loader, device, use_seq_len, use_tqdm, label="Training")
-    val_acc = evaluate_model(model, val_loader, device, use_seq_len, use_tqdm, label="Validation")
+        # 👇 Evaluate training & validation accuracy for this epoch
+        train_acc = evaluate_model(model, train_loader, device, use_seq_len, use_tqdm=False, label="Train")
+        val_acc = evaluate_model(model, val_loader, device, use_seq_len, use_tqdm=False, label="Val")
 
-    return train_acc, val_acc
+        print(f"Epoch {epoch}/{num_epochs} | Loss: {avg_loss:.4f} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}")
+
+    return train_acc, val_acc  # from final epoch
 
 def run_kfold_training(
     df,
