@@ -9,6 +9,8 @@ import inspect
 from data.data_preprocessor import load_gait_sequences
 from data.dataset import GaitOpticalFlowDataset  # Updated dataset import
 from models.gaitLSTM import GEIConvLSTMClassifier
+from models.gait3DCNN import Gait3DCNNClassifier
+from models.gaitFlow3DCNN import Flow3DCNNClassifier
 from utils.visualization import visualize_fold_accuracies
 from data.kcv import run_kfold_cross_validation
 
