@@ -100,7 +100,7 @@ def main_flow(
     # Run training loop
     accuracies = run_kfold_training(
         df=df,
-        model_class=Gait3DCNNClassifier,
+        model_class=GEIConvLSTMClassifier,
         dataset_class=GaitFrameSequenceDataset,
         num_classes=num_classes,
         k_folds=k_folds,
