@@ -105,7 +105,7 @@ def run_kfold_training(
 
         train_df = df.iloc[train_idx].reset_index(drop=True)
         val_df = df.iloc[val_idx].reset_index(drop=True)
-        if dataset_class == GaitOpticalFlowDataset:
+        if isinstance(dataset_class, GaitOpticalFlowDataset):
             train_dataset = dataset_class(
                 dataframe=train_df,
                 train_augmentations=flow_augment,
