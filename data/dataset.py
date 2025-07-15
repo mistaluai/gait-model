@@ -10,13 +10,14 @@ from utils.visualize_samples import visualize_optical_flow_samples, visualize_ga
 
 class GaitFrameSequenceDataset(Dataset):
     def __init__(self, dataframe, transform=None, label_to_index=None,
-                 return_metadata=False, image_size=(224, 224)):
+                 return_metadata=False, train_augmentations=None, image_size=(224, 224)):
         self.data = dataframe
         self.transform = transform or transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5], std=[0.5])
         ])
+        self.train_augmentations = train_augmentations
         self.return_metadata = return_metadata
         self.image_size = image_size
 
@@ -33,6 +34,8 @@ class GaitFrameSequenceDataset(Dataset):
 
     def load_and_transform_image(self, path):
         img = Image.open(path).convert("L")
+        if self.train_augmentations is not None:
+            return self.train_augmentations(img)
         return self.transform(img)
 
     def pad_or_downsample(self, frames):
@@ -67,7 +70,7 @@ import cv2
 
 class GaitOpticalFlowDataset(Dataset):
     def __init__(self, dataframe, transform=None, label_to_index=None,
-                 return_metadata=False, image_size=(224, 224), flow_augment=None, use_tvl1=False):
+                 return_metadata=False, image_size=(224, 224), train_augmentations=None, use_tvl1=False):
         self.data = dataframe
         self.transform = transform or transforms.Compose([
             transforms.Resize(image_size),
@@ -76,7 +79,7 @@ class GaitOpticalFlowDataset(Dataset):
         ])
         self.image_size = image_size
         self.return_metadata = return_metadata
-        self.flow_augment = flow_augment
+        self.flow_augment = train_augmentations
         self.use_tvl1 = use_tvl1
 
         self.target_length = int(np.median(self.data['sequence'].apply(len)))

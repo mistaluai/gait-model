@@ -13,8 +13,7 @@ def main(path: str = None):
 
     # Load dataframe
     df = load_gait_sequences(dataset_path, load_images=False)
-    dataset = GaitFrameSequenceDataset(df)
-    
+
     # Model and training parameters
     num_classes = len(df['label'].unique())
     k_folds = 5
@@ -25,7 +24,7 @@ def main(path: str = None):
 
     # Run k-fold training
     accuracies = run_kfold_training(
-        dataset=dataset,
+        df=df,
         model_class=GEIConvLSTMClassifier,
         num_classes=num_classes,
         k_folds=k_folds,
@@ -75,20 +74,12 @@ def main_flow(
     # Load gait sequence metadata
     df = load_gait_sequences(dataset_path, load_images=False)
 
-    # Create dataset
-    dataset = GaitOpticalFlowDataset(
-        dataframe=df,
-        return_metadata=False,
-        flow_augment=augment_flow,
-        use_tvl1=use_tvl1
-    )
-
     # Determine number of output classes
     num_classes = len(df['label'].unique())
 
     # Run training loop
     accuracies = run_kfold_training(
-        dataset=dataset,
+        df=df,
         model_class=FlowConvLSTMClassifier,
         num_classes=num_classes,
         k_folds=k_folds,
@@ -96,7 +87,9 @@ def main_flow(
         batch_size=batch_size,
         lr=lr,
         num_workers=num_workers,
-        use_tqdm=use_tqdm
+        use_tqdm=use_tqdm,
+        use_tvl1=use_tvl1,
+        flow_augment=augment_flow
     )
 
     # Plot final results

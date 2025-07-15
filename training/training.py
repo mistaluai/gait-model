@@ -7,11 +7,10 @@ from tqdm import tqdm
 import inspect
 
 from data.data_preprocessor import load_gait_sequences
-from data.dataset import GaitFrameSequenceDataset
+from data.dataset import GaitOpticalFlowDataset  # Updated dataset import
 from models.gaitLSTM import GEIConvLSTMClassifier
 from utils.visualization import visualize_fold_accuracies
 from data.kcv import run_kfold_cross_validation
-
 
 def evaluate_model(model, data_loader, device, use_seq_len, use_tqdm=True, label="Validation"):
     model.eval()
@@ -32,7 +31,6 @@ def evaluate_model(model, data_loader, device, use_seq_len, use_tqdm=True, label
     acc = accuracy_score(all_labels, all_preds)
     print(f"{label} Accuracy: {acc:.4f}")
     return acc
-
 
 def train_model(
     model,
@@ -71,32 +69,55 @@ def train_model(
         avg_loss = running_loss / len(train_loader)
         print(f"Epoch {epoch}/{num_epochs} - Training Loss: {avg_loss:.4f}")
 
-    # Evaluate on training and validation sets
     train_acc = evaluate_model(model, train_loader, device, use_seq_len, use_tqdm, label="Training")
     val_acc = evaluate_model(model, val_loader, device, use_seq_len, use_tqdm, label="Validation")
 
     return train_acc, val_acc
 
-
 def run_kfold_training(
-    dataset,
+    df,
     model_class,
+    dataset_class,
     num_classes,
     k_folds=5,
     epochs=20,
     batch_size=4,
     lr=1e-3,
     num_workers=1,
-    use_tqdm=True
+    use_tqdm=True,
+    use_tvl1=False,
+    flow_augment=None
 ):
+    from torch.utils.data import DataLoader
+    from sklearn.model_selection import StratifiedKFold
+
     device = torch.device("cuda" if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
     train_accuracies = []
     val_accuracies = []
 
-    for fold_idx, train_loader, val_loader in run_kfold_cross_validation(
-        dataset, k=k_folds, batch_size=batch_size, num_workers=num_workers
-    ):
+    labels = df['label'].values
+    skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
+
+    for fold_idx, (train_idx, val_idx) in enumerate(skf.split(df, labels)):
         print(f"\n--- Fold {fold_idx + 1} ---")
+
+        train_df = df.iloc[train_idx].reset_index(drop=True)
+        val_df = df.iloc[val_idx].reset_index(drop=True)
+
+        train_dataset = dataset_class(
+            dataframe=train_df,
+            train_augmentations=flow_augment,
+            use_tvl1=use_tvl1
+        )
+
+        val_dataset = dataset_class(
+            dataframe=val_df,
+            train_augmentations=None,
+            use_tvl1=use_tvl1
+        )
+
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         model = model_class(num_classes=num_classes).to(device)
         criterion = nn.CrossEntropyLoss()
@@ -121,13 +142,11 @@ def run_kfold_training(
 
     return val_accuracies
 
-
 if __name__ == "__main__":
     df = load_gait_sequences("/Users/mistaluai/Documents/Github Repos/gait-model/data/gei_maps/Multiclass6", load_images=False)
-    dataset = GaitFrameSequenceDataset(df)
 
     accuracies = run_kfold_training(
-        dataset=dataset,
+        df=df,
         model_class=GEIConvLSTMClassifier,
         num_classes=6,
         k_folds=5,
@@ -135,7 +154,9 @@ if __name__ == "__main__":
         batch_size=32,
         lr=1e-3,
         num_workers=2,
-        use_tqdm=True
+        use_tqdm=True,
+        use_tvl1=True,
+        flow_augment=...
     )
 
     visualize_fold_accuracies(accuracies)
