@@ -58,11 +58,19 @@ def run_gait_eda(df: pd.DataFrame, dataset_name: str):
     plt.ylabel("Number of Sequences")
     plt.tight_layout()
     plt.show()
-
     # 4. Sequence Length Stats
     df['seq_len'] = df['sequence'].apply(len)
     print("\n=== Sequence Length Stats ===")
     print(df['seq_len'].describe())
+
+    # ⛔ Check for invalid sequences
+    too_short = df[df['seq_len'] < 2]
+    if not too_short.empty:
+        print(
+            f"\n🚨 Found {len(too_short)} sequences with less than 2 frames! These will break optical flow computation.")
+        print(too_short[['label', 'subject', 'angle', 'trial', 'source', 'seq_len']])
+    else:
+        print("\n✅ All sequences have at least 2 frames.")
 
     plt.figure(figsize=(8, 4))
     sns.histplot(df['seq_len'], bins=20, kde=True, color='skyblue')
@@ -74,7 +82,7 @@ def run_gait_eda(df: pd.DataFrame, dataset_name: str):
 
 
 if __name__ == "__main__":
-    dataset_path = "./gei_maps/Multiclass6"
+    dataset_path = "./gei_maps/Multiclass4"
     dataset_name = dataset_path.strip("/").split("/")[-1]
     df = load_gait_sequences(dataset_path, load_images=False)
     run_gait_eda(df, dataset_name)

@@ -137,7 +137,7 @@ def main_flow_no_folds(
 
     # Load metadata
     dataset_path = path or "data/binary"
-    df = load_gait_sequences(dataset_path, load_images=False)
+    df = load_gait_sequences(dataset_path, load_images=False, min_sequence_length=3)
     num_classes = len(df["label"].unique())
 
     splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.3, random_state=seed)

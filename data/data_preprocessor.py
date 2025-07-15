@@ -73,21 +73,31 @@ def load_sequence(frames: List[Tuple[int, str]], load_images: bool = False) -> L
     return [path for _, path in frames_sorted]
 
 
-def build_dataframe(grouped_sequences: Dict, load_images: bool = False, include_metadata: bool = True) -> pd.DataFrame:
+def build_dataframe(grouped_sequences: Dict, load_images: bool = False, include_metadata: bool = True, min_sequence_length: int = None) -> pd.DataFrame:
     """
     Create DataFrame with columns:
         - sequence: list of frames (paths or images)
         - label: gait class (e.g., 'nm', 'fb')
         - (optional) subject, angle, trial, source (subfolder)
+    Args:
+        grouped_sequences (Dict): Mapping of metadata keys to frame lists
+        load_images (bool): If True, load actual images. Else, use paths.
+        include_metadata (bool): Whether to include subject, angle, etc.
+        min_sequence_length (int): If provided, filter out sequences shorter than this
     """
     data = []
     for key, frames in grouped_sequences.items():
         subject_id, angle, gait_class, trial, subfolder = key
         sequence = load_sequence(frames, load_images)
+
+        if min_sequence_length is not None and len(sequence) < min_sequence_length:
+            continue  # Skip sequences that are too short
+
         entry = {
             'sequence': sequence,
             'label': gait_class
         }
+
         if include_metadata:
             entry.update({
                 'subject': subject_id,
@@ -95,6 +105,7 @@ def build_dataframe(grouped_sequences: Dict, load_images: bool = False, include_
                 'trial': trial,
                 'source': os.path.basename(subfolder)
             })
+
         data.append(entry)
 
     return pd.DataFrame(data)
@@ -103,14 +114,15 @@ def build_dataframe(grouped_sequences: Dict, load_images: bool = False, include_
 def load_gait_sequences(
     dataset_root: str,
     load_images: bool = False,
-    include_metadata: bool = True
+    include_metadata: bool = True,
+    min_sequence_length: int = None,
 ) -> pd.DataFrame:
     """
     Main function to load and structure gait dataset into a DataFrame.
     Each row corresponds to a single sequence.
     """
     grouped = collect_sequences(dataset_root)
-    return build_dataframe(grouped, load_images, include_metadata)
+    return build_dataframe(grouped, load_images, include_metadata, min_sequence_length=min_sequence_length)
 
 if __name__ == '__main__':
     df = load_gait_sequences("./gei_maps/Binary", load_images=False)
