@@ -81,8 +81,7 @@ class GaitOpticalFlowDataset(Dataset):
         self.return_metadata = return_metadata
         self.flow_augment = train_augmentations
         self.use_tvl1 = use_tvl1
-
-        self.target_length = int(np.median(self.data['sequence'].apply(len)))
+        self.target_flow_length = int(np.median(self.data['sequence'].apply(len))) - 1
 
         if label_to_index is None:
             classes = sorted(self.data['label'].unique())
@@ -104,14 +103,14 @@ class GaitOpticalFlowDataset(Dataset):
         img = self.preprocess_image(img)
         return self.transform(img)
 
-    def pad_or_downsample(self, frames):
-        if len(frames) < self.target_length:
-            pad = [torch.zeros_like(frames[0])] * (self.target_length - len(frames))
-            return pad + frames
-        elif len(frames) > self.target_length:
-            indices = np.linspace(0, len(frames) - 1, self.target_length).astype(int)
-            return [frames[i] for i in indices]
-        return frames
+    def pad_or_downsample_flow(self, flows):
+        if len(flows) < self.target_flow_length:
+            pad = [torch.zeros_like(flows[0])] * (self.target_flow_length - len(flows))
+            return pad + flows
+        elif len(flows) > self.target_flow_length:
+            idx = np.linspace(0, len(flows) - 1, self.target_flow_length).astype(int)
+            return [flows[i] for i in idx]
+        return flows
 
     def compute_optical_flow(self, f1, f2):
         f1 = (f1.squeeze(0) * 255).numpy().astype(np.uint8)
@@ -129,7 +128,7 @@ class GaitOpticalFlowDataset(Dataset):
                 poly_n=5, poly_sigma=1.1,
                 flags=cv2.OPTFLOW_FARNEBACK_GAUSSIAN
             )
-            flow = np.clip(flow, -20, 20) / 20.0
+            flow = flow / (np.max(np.abs(flow)) + 1e-6)  # Normalize to [-1, 1]
 
         return torch.from_numpy(flow.transpose(2, 0, 1)).float()
 
@@ -140,7 +139,6 @@ class GaitOpticalFlowDataset(Dataset):
 
         frames = [self.load_and_transform_image(p) for p in paths]
         original_seq_len = len(frames)
-        frames = self.pad_or_downsample(frames)
 
         flow_sequence = []
         for i in range(len(frames) - 1):
@@ -149,7 +147,8 @@ class GaitOpticalFlowDataset(Dataset):
                 flow = self.flow_augment(flow)
             flow_sequence.append(flow)
 
-        flow_tensor = torch.stack(flow_sequence)  # [T-1, 2, H, W]
+        flow_sequence = self.pad_or_downsample_flow(flow_sequence)
+        flow_tensor = torch.stack(flow_sequence)
 
         if self.return_metadata:
             meta = {k: item[k] for k in ['subject', 'angle', 'trial', 'source']}
