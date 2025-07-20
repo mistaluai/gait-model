@@ -109,7 +109,39 @@ def build_dataframe(grouped_sequences: Dict, load_images: bool = False, include_
         data.append(entry)
 
     return pd.DataFrame(data)
+def load_gait_frames(
+    dataset_root: str,
+    load_images: bool = False,
+    include_metadata: bool = True,
+) -> pd.DataFrame:
+    """
+    Load each frame as a separate row with its label (and optional metadata).
+    Returns a DataFrame with columns: image (path or PIL), label, [subject, angle, trial, source, seq_index]
+    """
+    data = []
+    for root, _, files in os.walk(dataset_root):
+        for fname in files:
+            parsed = parse_filename(fname, root)
+            if parsed is None:
+                continue
+            subject_id, angle, gait_class, trial, subfolder, seq_index = parsed
+            img_path = os.path.join(root, fname)
+            img = Image.open(img_path).convert("L") if load_images else img_path
 
+            entry = {
+                'image': img,
+                'label': gait_class
+            }
+            if include_metadata:
+                entry.update({
+                    'subject': subject_id,
+                    'angle': angle,
+                    'trial': trial,
+                    'source': os.path.basename(subfolder),
+                    'seq_index': seq_index
+                })
+            data.append(entry)
+    return pd.DataFrame(data)
 
 def load_gait_sequences(
     dataset_root: str,
@@ -125,6 +157,8 @@ def load_gait_sequences(
     return build_dataframe(grouped, load_images, include_metadata, min_sequence_length=min_sequence_length)
 
 if __name__ == '__main__':
-    df = load_gait_sequences("./gei_maps/Binary", load_images=False)
+    df = load_gait_frames("./gei_maps/Binary", load_images=False)
     print(df.columns)
     print(df.sample(10))
+    print("Total frames:", len(df))
+    print("Class distribution:\n", df['label'].value_counts())
