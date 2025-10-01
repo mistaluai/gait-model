@@ -107,8 +107,8 @@ class Recognizer:
             pred_label = self.svm.predict(face_projected.reshape(1, -1))[0]
             confidence = np.max(self.svm.predict_proba(face_projected.reshape(1, -1)))
             # Optionally use threshold for "unknown"
-            if threshold is not None and confidence < threshold:
-                return None, "unknown", confidence
+            # if threshold is not None and confidence < threshold:
+            #     return None, "unknown", confidence
             return None, pred_label, confidence
         else:
             # Cosine similarity method
